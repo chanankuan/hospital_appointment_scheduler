@@ -1,2 +1,16 @@
-# hospital_appointment_scheduler
-A Hospital Appointment Scheduling System. Patients can enter their symptoms or required specialization (e.g., cardiology, surgery), and the system will find the nearest available appointment date with a doctor of the specified specialization. The system should consider doctor availability, patient load, and appointment duration.
+# Hospital Appointment Scheduler
+
+## Table of Content
+
+- [Overview](#overview)
+
+## Overview
+
+The **Hospital Appointment Scheduler** is a system designed to simplify the process of booking medical appointments.  
+Patients can specify their symptoms or required specialization (e.g., _cardiology_, _surgery_), and the system will automatically:
+
+- Match them with an available doctor in the required specialization.
+- Find the **nearest available appointment slot** based on doctor availability and workload.
+- Ensure efficient **time management** by considering appointment duration and patient load.
+
+This project aims to reduce waiting times, improve scheduling efficiency, and enhance the overall patient experience in hospitals or clinics.
