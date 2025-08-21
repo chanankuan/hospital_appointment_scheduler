@@ -3,33 +3,100 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import { v4 as uuidv4 } from "uuid";
 import morgan from "morgan";
 import cors from "cors";
+import session from "express-session";
+import { createClient } from "redis";
+import { RedisStore } from "connect-redis";
 import { config } from "./config/index.js";
+import { authRouter } from "./auth/index.js";
 import { type HttpException } from "./types.js";
+import { Exception, NotFoundException } from "./util/exceptions.js";
 
 export const app = express();
-app.use(morgan("dev"));
+
+// LOGS (ONLY DEV ENV)
+if (config.nodeEnv === "development") {
+  app.use(
+    morgan("dev", {
+      skip: req => req.url.includes(".well-known"),
+    })
+  );
+}
+
+// TODO: ADD WHITELIST
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("hello world");
+// CREATE REDIS CLIENT
+const redisClient = createClient({
+  url: config.redisUrl,
 });
 
-app.use((_, res) => {
-  res.status(404).json({ message: "Route not found" });
+redisClient.connect().catch(console.error); // Connect to Redis
+
+// CREATE REDIS STORE
+const redisStore = new RedisStore({
+  client: redisClient,
+  prefix: "myapp:",
 });
 
-app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
-  if (error instanceof Object && "status" in error && "message" in error) {
-    const { status = 500, message = "Server error" } = error as HttpException;
-    res.status(status).json({ message });
-  } else {
-    res.status(500).json({ message: "Server error" });
+app.use(
+  session({
+    store: redisStore,
+    name: "sid", // cookie name
+    resave: false, // required: force lightweight session keep alive (touch)
+    saveUninitialized: false, // recommended: only save session when data exists
+    secret: config.sessionSecret,
+    cookie: {
+      httpOnly: true,
+      secure: config.nodeEnv === "production", // only HTTPS in prod
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    },
+    genid: function (req) {
+      return uuidv4(); // use UUIDs for session IDs
+    },
+  })
+);
+
+// REFRESH THE SESSION WHILE THE USER IS ACTIVE
+app.use((req, _, next) => {
+  if (req.session) {
+    req.session.touch(); // refresh expiration
   }
+  next();
 });
 
+// AUTH ROUTE
+app.use("/api/auth", authRouter);
+
+// NOT FOUND ROUTE
+app.use((_, res, next) => {
+  // res.status(404).json({ message: "Route not found" });
+  next(new NotFoundException("Route not found"));
+});
+
+// HANDLE ERRORS
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof Exception) {
+    const { statusCode, error, message } = err;
+
+    return res.status(statusCode).json({
+      statusCode: statusCode,
+      error: error,
+      message: message,
+    });
+  }
+
+  res.status(500).json({
+    statusCode: 500,
+    error: "InternalServerError",
+    message: "Server error",
+  });
+});
+
+// LISTEN THE APP
 app.listen(config.port, () => {
   console.log(`Server running on http://localhost:${config.port}`);
 });
