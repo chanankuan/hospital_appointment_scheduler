@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import express, {
   type NextFunction,
   type Request,
@@ -9,6 +10,8 @@ import cors from "cors";
 import session from "express-session";
 import { createClient } from "redis";
 import { RedisStore } from "connect-redis";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 import { config } from "./config/index.js";
 import { authRouter } from "./auth/index.js";
 import { type HttpException } from "./types.js";
@@ -60,6 +63,10 @@ app.use(
   })
 );
 
+// SWAGGER SETUP
+const swaggerFile = fs.readFileSync("./src/swagger/swagger.yaml", "utf8");
+const swaggerDocument = yaml.load(swaggerFile) as swaggerUi.JsonObject;
+
 // REFRESH THE SESSION WHILE THE USER IS ACTIVE
 app.use((req, _, next) => {
   if (req.session) {
@@ -70,6 +77,9 @@ app.use((req, _, next) => {
 
 // AUTH ROUTE
 app.use("/api/auth", authRouter);
+
+// SWAGGER UI ROUTE
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // NOT FOUND ROUTE
 app.use((_, res, next) => {
