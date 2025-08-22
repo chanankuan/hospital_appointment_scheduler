@@ -1,0 +1,334 @@
+openapi: 3.0.0
+info:
+  title: Hospital Appointment Scheduler
+  description: >
+    A hospital appointment scheduling system that helps patients find the
+    nearest available doctor appointment based on specialization, availability,
+    and patient load.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: u123
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+        email:
+          type: string
+          example: john.doe@example.com
+        phone_number:
+          type: string
+          example: "+1234567890"
+        is_verified:
+          type: boolean
+          example: true
+    BadRequestException:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: BadRequest
+        message:
+          type: string
+          example: Bad request
+    UnauthorizedException:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 401
+        error:
+          type: string
+          example: Unauthorized
+        message:
+          type: string
+          example: Unauthorized
+    ForbiddenException:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 403
+        error:
+          type: string
+          example: Forbidden
+        message:
+          type: string
+          example: Forbidden
+    NotFoundException:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: NotFound
+        message:
+          type: string
+          example: Not Found
+    ConflictException:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 409
+        error:
+          type: string
+          example: Conflict
+        message:
+          type: string
+          example: Email already in use
+    InternalServerError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 500
+        error:
+          type: string
+          example: InternalServerError
+        message:
+          type: string
+          example: Server error
+    BadRequestValidation:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: BadRequest
+        message:
+          type: string
+          example:
+            Password must include uppercase, lowercase, number, and special
+            character
+    InvalidCredentials:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 401
+        error:
+          type: string
+          example: Unauthorized
+        message:
+          type: string
+          example: Invalid credentials
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [first_name, last_name, email, phone_number, password]
+              properties:
+                first_name:
+                  type: string
+                  example: John
+                last_name:
+                  type: string
+                  example: Doe
+                email:
+                  type: string
+                  pattern: '^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$'
+                  example: john.doe@example.com
+                phone_number:
+                  type: string
+                  example: "+1234567890"
+                password:
+                  type: string
+                  minLength: 8
+                  pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])"
+                  example: "StrongPass123!"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    $ref: "#/components/schemas/User"
+                  message:
+                    type: string
+                    example: Register successful
+        "400":
+          description: Validation unsuccessful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestValidation"
+        "409":
+          description: Conflict – Email or phone already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictException"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+
+  /api/auth/login:
+    post:
+      summary: Log in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: john.doe@example.com
+                password:
+                  type: string
+                  example: StrongPass123!
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    $ref: "#/components/schemas/User"
+                  message:
+                    type: string
+                    example: Login successful
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidCredentials"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+
+  /api/auth/logout:
+    post:
+      summary: Log out the current user
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    type: "null"
+                    example: null
+                  message:
+                    type: string
+                    example: Logout successful
+        "401":
+          description: Unauthorized – No active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedException"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+
+  /api/auth/me:
+    get:
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized – No active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedException"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+
+  /api/auth/change-password:
+    post:
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                  pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])"
+                  example: "NewStrongPass456!"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    type: "null"
+                    example: null
+                  message:
+                    type: string
+                    example: Password changed successfully
+        "400":
+          description: Validation unsuccessful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestValidation"
+        "401":
+          description: Unauthorized – Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedException"
