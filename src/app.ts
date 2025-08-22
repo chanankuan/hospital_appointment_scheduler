@@ -12,7 +12,7 @@ import { RedisStore } from "connect-redis";
 import { config } from "./config/index.js";
 import { authRouter } from "./auth/index.js";
 import { type HttpException } from "./types.js";
-import { Exception, NotFoundException } from "./util/exceptions.js";
+import { Exception, NotFoundException } from "./utils/exceptions.js";
 
 export const app = express();
 
